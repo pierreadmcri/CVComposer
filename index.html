@@ -30,9 +30,16 @@
           <div class="section-heading">
             <h2>Import LinkedIn</h2>
           </div>
-          <p class="helper-text">Importe un JSON LinkedIn exporté ou colle un extrait texte de ton profil.</p>
-          <input type="file" id="linkedin-file" accept="application/json" />
-          <textarea id="linkedin-paste" rows="5" placeholder="Nom\nTitre\nLocalisation\nRésumé\nSkills: React, TypeScript, ATS..."></textarea>
+          <p class="helper-text">Importe un export LinkedIn en CSV (après décompression du ZIP), un ancien JSON, ou colle le texte brut de ton profil.</p>
+          <input type="file" id="linkedin-file" accept=".json,.csv,application/json,text/csv" multiple />
+          <p class="helper-text">Astuce&nbsp;: télécharge ton archive de données LinkedIn, décompresse-la, puis sélectionne ensemble des fichiers comme <strong>Profile.csv</strong>, <strong>Positions.csv</strong>, <strong>Education.csv</strong> et <strong>Skills.csv</strong>.</p>
+          <textarea id="linkedin-paste" rows="7" placeholder="Nom
+Titre
+Localisation
+Résumé
+Skills: React, TypeScript, ATS...
+
+Tu peux aussi coller plusieurs sections copiées depuis LinkedIn."></textarea>
           <div class="action-row compact-actions">
             <button id="linkedin-paste-btn">Analyser le texte collé</button>
             <span class="status-text" id="import-status">Aucun import pour le moment.</span>

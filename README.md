@@ -5,7 +5,7 @@ CVComposer est un créateur de CV optimisé ATS qui tourne **entièrement en loc
 ## Fonctionnalités
 
 - 3 templates de CV ATS et impression A4.
-- Import de profil LinkedIn via **JSON exporté** ou **collage manuel** d’un extrait.
+- Import de profil LinkedIn via **CSV exporté par LinkedIn** (après décompression du ZIP), ancien **JSON exporté** ou **collage manuel** d’un extrait.
 - Modification des sections principales : infos perso, compétences, expériences, formation, projets, certifications.
 - Ajout de sections personnalisées.
 - Score ATS indicatif avec conseils.
@@ -40,7 +40,27 @@ Puis ouvrez `http://localhost:4173`.
 
 ## Import LinkedIn recommandé
 
-Le moyen le plus fiable pour “charger votre profil LinkedIn” localement est d’utiliser un **export JSON LinkedIn** puis de l’importer dans l’application. Une alternative plus simple est de coller un extrait texte de votre profil public pour préremplir le CV.
+### Peut-on connecter LinkedIn “directement” ?
+
+Pas proprement dans cette architecture actuelle : CVComposer est une application **100% locale et statique**, sans backend. Une vraie connexion directe à LinkedIn demanderait au minimum :
+
+- une application LinkedIn Developer,
+- une authentification OAuth,
+- la gestion sécurisée d’un secret côté serveur,
+- et des permissions API spécifiques.
+
+Pour garder l’outil simple et local-first, l’application prend désormais en charge une solution plus réaliste :
+
+- **les CSV de l’archive LinkedIn** une fois le ZIP décompressé,
+- les anciens **JSON exportés** si vous en avez déjà,
+- ou le **collage de texte brut** depuis votre profil.
+
+### Flux conseillé
+
+1. Depuis LinkedIn, demandez votre **archive de données**.
+2. Décompressez le ZIP reçu.
+3. Importez dans CVComposer les fichiers CSV utiles comme `Profile.csv`, `Positions.csv`, `Education.csv` et `Skills.csv`.
+4. Complétez ensuite à la main les éventuels champs manquants.
 
 ## Export PDF
 
