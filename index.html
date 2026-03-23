@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CVComposer - ATS CV Builder local</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="editor-panel">
+        <section class="hero-card">
+          <p class="eyebrow">CVComposer</p>
+          <h1>Créateur de CV ATS local-first</h1>
+          <p>
+            J’ai choisi la solution la plus simple à manipuler : une application web locale statique, sans backend ni dépendances.
+            Tu peux l’ouvrir directement ou la servir avec un petit serveur local, modifier ton CV en direct et l’exporter en PDF.
+          </p>
+        </section>
+
+        <section class="panel-section score-card">
+          <div>
+            <p class="eyebrow">Score ATS</p>
+            <strong id="ats-score">0/100</strong>
+          </div>
+          <ul id="ats-tips"></ul>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Import LinkedIn</h2>
+          </div>
+          <p class="helper-text">Importe un JSON LinkedIn exporté ou colle un extrait texte de ton profil.</p>
+          <input type="file" id="linkedin-file" accept="application/json" />
+          <textarea id="linkedin-paste" rows="5" placeholder="Nom\nTitre\nLocalisation\nRésumé\nSkills: React, TypeScript, ATS..."></textarea>
+          <div class="action-row compact-actions">
+            <button id="linkedin-paste-btn">Analyser le texte collé</button>
+            <span class="status-text" id="import-status">Aucun import pour le moment.</span>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Informations principales</h2>
+          </div>
+          <div class="grid-two" id="basics-form"></div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Style & compétences</h2>
+          </div>
+          <div class="grid-two compact-grid">
+            <label>
+              <span>Template</span>
+              <select id="template-select">
+                <option value="minimal">Minimal ATS</option>
+                <option value="executive">Executive</option>
+                <option value="sidebar">Sidebar moderne</option>
+              </select>
+            </label>
+            <label>
+              <span>Couleur accent</span>
+              <input type="color" id="accent-color" />
+            </label>
+            <label class="full-span">
+              <span>Compétences (une par ligne)</span>
+              <textarea id="skills-input" rows="4"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Expériences</h2>
+            <button class="secondary-button" data-add-section="experience">+ Ajouter</button>
+          </div>
+          <div id="experience-list"></div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Formation</h2>
+            <button class="secondary-button" data-add-section="education">+ Ajouter</button>
+          </div>
+          <div id="education-list"></div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Projets</h2>
+            <button class="secondary-button" data-add-section="projects">+ Ajouter</button>
+          </div>
+          <div id="projects-list"></div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Certifications</h2>
+            <button class="secondary-button" data-add-section="certifications">+ Ajouter</button>
+          </div>
+          <div id="certifications-list"></div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <h2>Sections personnalisées</h2>
+            <button class="secondary-button" id="add-custom-section">+ Ajouter une section</button>
+          </div>
+          <div id="custom-sections"></div>
+        </section>
+
+        <section class="panel-section action-row">
+          <button id="save-btn">Sauvegarder en local</button>
+          <button class="primary-button" id="export-pdf-btn">Télécharger en PDF</button>
+        </section>
+      </aside>
+
+      <main class="preview-panel">
+        <article class="resume-sheet template-minimal" id="resume-preview">
+          <header class="resume-header">
+            <div>
+              <h1 id="preview-name"></h1>
+              <h2 id="preview-title"></h2>
+            </div>
+            <div class="contact-grid" id="preview-contact"></div>
+          </header>
+          <div class="resume-main">
+            <section class="resume-section summary-block">
+              <h3>Profil</h3>
+              <p id="preview-summary"></p>
+            </section>
+            <section class="resume-section skills-block">
+              <h3>Compétences</h3>
+              <div class="skills-list" id="preview-skills"></div>
+            </section>
+            <section class="resume-section">
+              <h3>Expérience</h3>
+              <div id="preview-experience"></div>
+            </section>
+            <section class="resume-section">
+              <h3>Formation</h3>
+              <div id="preview-education"></div>
+            </section>
+            <section class="resume-section">
+              <h3>Projets</h3>
+              <div id="preview-projects"></div>
+            </section>
+            <section class="resume-section">
+              <h3>Certifications</h3>
+              <div id="preview-certifications"></div>
+            </section>
+            <div id="preview-custom-sections"></div>
+          </div>
+        </article>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
