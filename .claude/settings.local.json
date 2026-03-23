@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(C:/Users/pierr/.claude/plugins/cache/nyldn-plugins/octo/9.4.2/scripts/orchestrate.sh detect-providers:*)",
+      "Bash(rustc --version)",
+      "Bash(npm --version)",
+      "Bash(cargo --version)",
+      "Bash(npm list:*)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(cd:*)",
+      "Bash(npx tauri:*)"
+    ]
+  }
+}

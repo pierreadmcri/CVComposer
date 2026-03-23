@@ -146,7 +146,7 @@ function renderBasicsForm() {
     field.value = value;
     field.addEventListener('input', (event) => {
       resume.basics[key] = event.target.value;
-      onResumeChange();
+      onResumeInput();
     });
 
     label.appendChild(field);
@@ -175,7 +175,7 @@ function renderSectionEditors(sectionKey, targetId, allowTitle = true) {
         item[field] = field === 'highlights'
           ? event.target.value.split('\n').map((entry) => entry.trim()).filter(Boolean)
           : event.target.value;
-        onResumeChange(false);
+        onResumeInput();
       });
       label.appendChild(input);
       wrapper.appendChild(label);
@@ -210,7 +210,7 @@ function renderCustomSections() {
     titleInput.value = section.name;
     titleInput.addEventListener('input', (event) => {
       section.name = event.target.value;
-      onResumeChange(false);
+      onResumeInput();
     });
     titleLabel.appendChild(titleInput);
     card.appendChild(titleLabel);
@@ -229,7 +229,7 @@ function renderCustomSections() {
           item[field] = field === 'highlights'
             ? event.target.value.split('\n').map((entry) => entry.trim()).filter(Boolean)
             : event.target.value;
-          onResumeChange(false);
+          onResumeInput();
         });
         label.appendChild(input);
         wrapper.appendChild(label);
@@ -324,18 +324,26 @@ function renderPreview() {
   document.getElementById('ats-tips').innerHTML = ats.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join('');
 }
 
-function onResumeChange(shouldPersist = true) {
+function renderEditorPanels() {
   renderBasicsForm();
   renderSectionEditors('experience', 'experience-list');
   renderSectionEditors('education', 'education-list');
   renderSectionEditors('projects', 'projects-list');
   renderSectionEditors('certifications', 'certifications-list');
   renderCustomSections();
+}
+
+function onResumeInput(shouldPersist = true) {
+  renderPreview();
+  if (shouldPersist) persistResume();
+}
+
+function onResumeChange(shouldPersist = true) {
+  renderEditorPanels();
   renderPreview();
   syncStaticControls();
   if (shouldPersist) persistResume();
 }
-
 function syncStaticControls() {
   document.getElementById('template-select').value = resume.template;
   document.getElementById('accent-color').value = resume.accentColor;
@@ -388,18 +396,20 @@ function normalizeKey(value) {
     .replace(/[^a-z0-9]+/g, '');
 }
 
-function parseCsvLine(line) {
-  const cells = [];
-  let current = '';
+function parseCsv(text) {
+  const rows = [];
+  const content = text.replace(/^\ufeff/, '');
+  let currentRow = [];
+  let currentCell = '';
   let inQuotes = false;
 
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+    const next = content[index + 1];
 
     if (char === '"') {
       if (inQuotes && next === '"') {
-        current += '"';
+        currentCell += '"';
         index += 1;
       } else {
         inQuotes = !inQuotes;
@@ -408,36 +418,42 @@ function parseCsvLine(line) {
     }
 
     if (char === ',' && !inQuotes) {
-      cells.push(current);
-      current = '';
+      currentRow.push(currentCell.trim());
+      currentCell = '';
       continue;
     }
 
-    current += char;
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') index += 1;
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      if (currentRow.some((cell) => cell.trim())) rows.push(currentRow);
+      currentRow = [];
+      continue;
+    }
+
+    currentCell += char;
   }
 
-  cells.push(current);
-  return cells.map((cell) => cell.trim());
-}
+  if (currentCell.length || currentRow.length) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((cell) => cell.trim())) rows.push(currentRow);
+  }
 
-function parseCsv(text) {
-  const lines = text.replace(/^\ufeff/, '').split(/\r?\n/).filter((line) => line.trim());
-  if (!lines.length) return [];
+  if (!rows.length) return [];
 
-  const headers = parseCsvLine(lines[0]).map((header, index) => ({
+  const headers = rows[0].map((header, index) => ({
     raw: header,
     key: normalizeKey(header) || `column${index}`,
   }));
 
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
+  return rows.slice(1).map((values) => {
     return headers.reduce((entry, header, index) => {
       entry[header.key] = values[index] || '';
       return entry;
     }, {});
   }).filter((entry) => Object.values(entry).some(Boolean));
 }
-
 function getField(entry, candidates) {
   const keys = Object.keys(entry || {});
   for (const candidate of candidates) {
@@ -663,17 +679,17 @@ function bindEvents() {
 
   document.getElementById('template-select').addEventListener('change', (event) => {
     resume.template = event.target.value;
-    onResumeChange();
+    onResumeInput();
   });
 
   document.getElementById('accent-color').addEventListener('input', (event) => {
     resume.accentColor = event.target.value;
-    onResumeChange();
+    onResumeInput();
   });
 
   document.getElementById('skills-input').addEventListener('input', (event) => {
     resume.skills = event.target.value.split('\n').map((item) => item.trim()).filter(Boolean);
-    onResumeChange(false);
+    onResumeInput();
   });
 
   document.getElementById('save-btn').addEventListener('click', () => {
@@ -711,4 +727,5 @@ function bindEvents() {
 }
 
 bindEvents();
-onResumeChange();
+onResumeChange(false);
+
