@@ -379,6 +379,233 @@ function mapItem(entry) {
   };
 }
 
+
+function normalizeKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function parseCsvLine(line) {
+  const cells = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      cells.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current);
+  return cells.map((cell) => cell.trim());
+}
+
+function parseCsv(text) {
+  const lines = text.replace(/^\ufeff/, '').split(/\r?\n/).filter((line) => line.trim());
+  if (!lines.length) return [];
+
+  const headers = parseCsvLine(lines[0]).map((header, index) => ({
+    raw: header,
+    key: normalizeKey(header) || `column${index}`,
+  }));
+
+  return lines.slice(1).map((line) => {
+    const values = parseCsvLine(line);
+    return headers.reduce((entry, header, index) => {
+      entry[header.key] = values[index] || '';
+      return entry;
+    }, {});
+  }).filter((entry) => Object.values(entry).some(Boolean));
+}
+
+function getField(entry, candidates) {
+  const keys = Object.keys(entry || {});
+  for (const candidate of candidates) {
+    const normalizedCandidate = normalizeKey(candidate);
+    const exact = keys.find((key) => key === normalizedCandidate);
+    if (exact && entry[exact]) return String(entry[exact]).trim();
+
+    const partial = keys.find((key) => key.includes(normalizedCandidate) || normalizedCandidate.includes(key));
+    if (partial && entry[partial]) return String(entry[partial]).trim();
+  }
+
+  return '';
+}
+
+function inferCsvSection(filename, rows) {
+  const normalizedName = normalizeKey(filename);
+  const sample = rows[0] || {};
+  const keys = Object.keys(sample);
+
+  if (/(skill|competenc)/.test(normalizedName)) return 'skills';
+  if (/(position|experience|emploi|job)/.test(normalizedName)) return 'experience';
+  if (/(education|formation|school|stud)/.test(normalizedName)) return 'education';
+  if (/(project|projet)/.test(normalizedName)) return 'projects';
+  if (/(cert|license|licen)/.test(normalizedName)) return 'certifications';
+  if (/(profile|profil|basic|contact|personal|person)/.test(normalizedName)) return 'basics';
+
+  if (keys.some((key) => /headline|firstname|lastname|publicprofile|email/.test(key))) return 'basics';
+  if (keys.some((key) => /skill/.test(key))) return 'skills';
+  if (keys.some((key) => /company|position|employment|startedon|endedon/.test(key))) return 'experience';
+  if (keys.some((key) => /school|degree|fieldofstudy/.test(key))) return 'education';
+  if (keys.some((key) => /cert|license/.test(key))) return 'certifications';
+  if (keys.some((key) => /project/.test(key))) return 'projects';
+
+  return '';
+}
+
+function mapCsvItem(entry, section) {
+  if (section === 'education') {
+    return {
+      id: uid(),
+      title: getField(entry, ['schoolName', 'school', 'institution', 'title']) || 'Formation',
+      subtitle: getField(entry, ['degreeName', 'degree', 'fieldOfStudy', 'subtitle']),
+      location: getField(entry, ['location', 'geoLocationName']),
+      startDate: getField(entry, ['startDate', 'startedOn', 'from']),
+      endDate: getField(entry, ['endDate', 'finishedOn', 'to']),
+      description: getField(entry, ['notes', 'description', 'activities']),
+      highlights: normalizeBullets(getField(entry, ['activities', 'description'])),
+    };
+  }
+
+  if (section === 'projects') {
+    return {
+      id: uid(),
+      title: getField(entry, ['name', 'title', 'projectName']) || 'Projet',
+      subtitle: getField(entry, ['occupation', 'role', 'organization', 'subtitle']),
+      location: getField(entry, ['location']),
+      startDate: getField(entry, ['startDate', 'startedOn', 'from']),
+      endDate: getField(entry, ['endDate', 'finishedOn', 'to']),
+      description: getField(entry, ['description', 'summary']),
+      highlights: normalizeBullets(getField(entry, ['skills', 'highlights', 'description'])),
+    };
+  }
+
+  if (section === 'certifications') {
+    return {
+      id: uid(),
+      title: getField(entry, ['name', 'title', 'certificationName']) || 'Certification',
+      subtitle: getField(entry, ['authority', 'issuer', 'organization']),
+      location: '',
+      startDate: getField(entry, ['startDate', 'issueDate']),
+      endDate: getField(entry, ['endDate', 'expirationDate']),
+      description: getField(entry, ['credentialUrl', 'licenseNumber', 'description']),
+      highlights: normalizeBullets(getField(entry, ['skills'])),
+    };
+  }
+
+  return {
+    id: uid(),
+    title: getField(entry, ['title', 'position', 'role', 'employmentTitle']) || 'Expérience',
+    subtitle: getField(entry, ['companyName', 'company', 'organization', 'subtitle']),
+    location: getField(entry, ['location', 'geoLocationName']),
+    startDate: getField(entry, ['startDate', 'startedOn', 'from']),
+    endDate: getField(entry, ['endDate', 'finishedOn', 'to']),
+    description: getField(entry, ['description', 'summary']),
+    highlights: normalizeBullets(getField(entry, ['highlights', 'achievements', 'description', 'skills'])),
+  };
+}
+
+function parseLinkedInCsvBundle(files) {
+  const partial = {
+    basics: {},
+    skills: [],
+    experience: [],
+    education: [],
+    projects: [],
+    certifications: [],
+  };
+
+  files.forEach(({ name, rows }) => {
+    if (!rows.length) return;
+    const section = inferCsvSection(name, rows);
+    if (!section) return;
+
+    if (section === 'basics') {
+      const profile = rows[0];
+      const firstName = getField(profile, ['firstName', 'prenom']);
+      const lastName = getField(profile, ['lastName', 'nom']);
+      partial.basics = {
+        fullName: [firstName, lastName].filter(Boolean).join(' ') || getField(profile, ['fullName', 'name']),
+        title: getField(profile, ['headline', 'title', 'jobTitle']),
+        email: getField(profile, ['email', 'emailAddress']),
+        phone: getField(profile, ['phone', 'phoneNumber', 'mobile']),
+        location: getField(profile, ['location', 'locationName']),
+        linkedIn: getField(profile, ['publicProfileUrl', 'linkedin', 'profileUrl']),
+        website: getField(profile, ['website', 'personalWebsite']),
+        summary: getField(profile, ['summary', 'about', 'description']),
+      };
+      return;
+    }
+
+    if (section === 'skills') {
+      partial.skills = rows
+        .map((entry) => getField(entry, ['name', 'skill', 'skills']))
+        .flatMap((value) => value.split(/[,;\n]/))
+        .map((value) => value.trim())
+        .filter(Boolean);
+      return;
+    }
+
+    partial[section] = rows.map((entry) => mapCsvItem(entry, section)).filter((entry) => {
+      return entry.title || entry.subtitle || entry.description;
+    });
+  });
+
+  return partial;
+}
+
+async function parseLinkedInFiles(fileList) {
+  const files = Array.from(fileList || []);
+  const jsonFile = files.find((file) => file.name.toLowerCase().endsWith('.json'));
+
+  if (jsonFile) {
+    const raw = await jsonFile.text();
+    return {
+      partial: parseLinkedInJson(JSON.parse(raw)),
+      mode: 'json',
+      source: jsonFile.name,
+    };
+  }
+
+  const csvFiles = await Promise.all(files
+    .filter((file) => file.name.toLowerCase().endsWith('.csv'))
+    .map(async (file) => ({
+      name: file.name,
+      rows: parseCsv(await file.text()),
+    })));
+
+  if (csvFiles.length) {
+    return {
+      partial: parseLinkedInCsvBundle(csvFiles),
+      mode: 'csv',
+      source: csvFiles.map((file) => file.name).join(', '),
+    };
+  }
+
+  throw new Error('unsupported-file-type');
+}
+
 function parseLinkedInJson(payload) {
   const profile = payload.profile || payload;
   const firstName = String(profile.firstName || '').trim();
@@ -466,15 +693,19 @@ function bindEvents() {
   });
 
   document.getElementById('linkedin-file').addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
 
     try {
-      const raw = await file.text();
-      mergeResume(parseLinkedInJson(JSON.parse(raw)));
-      document.getElementById('import-status').textContent = `Import JSON LinkedIn réussi depuis ${file.name}.`;
+      const { partial, mode, source } = await parseLinkedInFiles(files);
+      mergeResume(partial);
+      document.getElementById('import-status').textContent = mode === 'csv'
+        ? `Import LinkedIn CSV réussi depuis ${source}.`
+        : `Import JSON LinkedIn réussi depuis ${source}.`;
     } catch (error) {
-      document.getElementById('import-status').textContent = `Impossible de lire ${file.name}. Vérifie le format JSON LinkedIn.`;
+      document.getElementById('import-status').textContent = 'Impossible de lire ces fichiers LinkedIn. Utilise un JSON valide, ou des CSV extraits de l’archive LinkedIn.';
+    } finally {
+      event.target.value = '';
     }
   });
 }
