@@ -1,0 +1,26 @@
+{
+  "name": "cvcomposer",
+  "version": "1.0.0",
+  "description": "CVComposer est un créateur de CV optimisé ATS qui tourne **entièrement en local** sur votre PC via une application web statique. J’ai choisi cette architecture car c’est **la plus simple à manipuler** : pas de backend, pas de base de données, pas de build obligatoire, et elle peut ensuite être empaquetée dans Tauri si vous voulez une vraie app desktop.",
+  "main": "app.js",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pierreadmcri/CVComposer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pierreadmcri/CVComposer/issues"
+  },
+  "homepage": "https://github.com/pierreadmcri/CVComposer#readme",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1"
+  }
+}
